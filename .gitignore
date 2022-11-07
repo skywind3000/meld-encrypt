@@ -1,7 +1,9 @@
 # Intellij
 *.iml
 .idea
+
 /.vscode
+/build
 
 # npm
 node_modules
