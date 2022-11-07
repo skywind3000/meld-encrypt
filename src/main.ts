@@ -1,35 +1,28 @@
-import { Notice, Plugin, MarkdownView, Editor, EditorPosition, moment, normalizePath, TFile, TFolder } from 'obsidian';
+import { Notice, Plugin, MarkdownView, Editor, EditorPosition } from 'obsidian';
 import DecryptModal from './DecryptModal';
 import PasswordModal from './PasswordModal';
-import { CryptoHelperV2, CryptoHelperObsolete } from './CryptoHelper';
+import { CryptoHelperV2, CryptoHelperObsolete} from './CryptoHelper';
 import MeldEncryptSettingsTab from './MeldEncryptSettingsTab';
-import { EncryptedFileContentView, VIEW_TYPE_ENCRYPTED_FILE_CONTENT } from './EncryptedFileContentView';
 
-// DEPRECATED below
 const _PREFIX: string = '%%🔐';
 const _PREFIX_OBSOLETE: string = _PREFIX + ' ';
 const _PREFIX_A: string = _PREFIX + 'α ';
 const _SUFFIX: string = ' 🔐%%';
 
 const _HINT: string = '💡';
-// DEPRECATED above
 
 interface MeldEncryptPluginSettings {
-	addRibbonIconToCreateNote: boolean,
-	// DEPRECATED below
 	expandToWholeLines: boolean,
 	confirmPassword: boolean;
-	showCopyButton: boolean;
+	showButton: boolean;
 	rememberPassword: boolean;
 	rememberPasswordTimeout: number;
 }
 
 const DEFAULT_SETTINGS: MeldEncryptPluginSettings = {
-	addRibbonIconToCreateNote: true,
-	// DEPRECATED below
 	expandToWholeLines: true,
 	confirmPassword: true,
-	showCopyButton: true,
+	showButton: false,
 	rememberPassword: true,
 	rememberPasswordTimeout: 30
 }
@@ -40,56 +33,30 @@ export default class MeldEncrypt extends Plugin {
 	passwordLastUsedExpiry: number
 	passwordLastUsed: string;
 
-	ribbonIconCreateNewNote?: HTMLElement;
-
 	async onload() {
 
 		await this.loadSettings();
 
-		this.updateUiForSettings();
-
 		this.addSettingTab(new MeldEncryptSettingsTab(this.app, this));
-
-
-		this.registerView(
-			VIEW_TYPE_ENCRYPTED_FILE_CONTENT,
-			(leaf) => new EncryptedFileContentView(leaf)
-		);
-
-		this.registerExtensions(['encrypted'], VIEW_TYPE_ENCRYPTED_FILE_CONTENT);
-
-		this.addCommand({
-			id: 'meld-encrypt-create-new-note',
-			name: 'Create new encrypted note',
-			checkCallback: (checking) => this.processCreateNewEncryptedNoteCommand(checking)
-		});
-		
-
-		// DEPRECATED below
 
 		this.addCommand({
 			id: 'meld-encrypt',
-			name: 'DEPRECATED - Encrypt/Decrypt',
-			editorCheckCallback: (checking, editor, view) => this.deprecatedProcessEncryptDecryptCommand(checking, editor, view, false)
+			name: 'Encrypt/Decrypt',
+			editorCheckCallback: (checking, editor, view) => this.processEncryptDecryptCommand(checking, editor, view, false)
 		});
 
 		this.addCommand({
 			id: 'meld-encrypt-in-place',
-			name: 'DEPRECATED - Encrypt/Decrypt In-place',
-			editorCheckCallback: (checking, editor, view) => this.deprecatedProcessEncryptDecryptCommand(checking, editor, view, true)
+			name: 'Encrypt/Decrypt In-place',
+			editorCheckCallback: (checking, editor, view) => this.processEncryptDecryptCommand(checking, editor, view, true)
 		});
 
 		this.addCommand({
 			id: 'meld-encrypt-note',
-			name: 'DEPRECATED - Encrypt/Decrypt Whole Note',
-			editorCheckCallback: (checking, editor, view) => this.deprecatedProcessEncryptDecryptWholeNoteCommand(checking, editor, view)
+			name: 'Encrypt/Decrypt Whole Note',
+			editorCheckCallback: (checking, editor, view) => this.processEncryptDecryptWholeNoteCommand(checking, editor, view)
 		});
-		
-		// DEPRECATED above
-	}
-	
-	onunload() {
-		this.app.workspace.detachLeavesOfType(VIEW_TYPE_ENCRYPTED_FILE_CONTENT);
+
 	}
 
 	async loadSettings() {
@@ -98,68 +65,13 @@ export default class MeldEncrypt extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-		this.updateUiForSettings();
-	}
-
-	private updateUiForSettings(){
-		if (this.settings.addRibbonIconToCreateNote){
-			// turn on ribbon icon
-			if (this.ribbonIconCreateNewNote == null){
-				this.ribbonIconCreateNewNote = this.addRibbonIcon('lock', 'Create new encrypted note', (ev)=>{
-					this.processCreateNewEncryptedNoteCommand(false);
-				});
-			}
-		}else{
-			// turn off ribbon icon
-			if (this.ribbonIconCreateNewNote != null){
-				this.ribbonIconCreateNewNote.remove();
-				this.ribbonIconCreateNewNote = null;
-			}
-		}
 	}
 
 	isSettingsModalOpen() : boolean{
 		return document.querySelector('.mod-settings') !== null;
 	} 
 
-	private processCreateNewEncryptedNoteCommand(checking: boolean): boolean{
-		console.debug('processCreateNewEncryptedNoteCommand', {checking});
-		try{
-			if (checking){
-				return true;
-			}
-			
-			let newFilename = moment().format('[Untitled] YYYYMMDD hhmmss[.encrypted]'); 
-			
-			let newFileFolder : TFolder;
-			const activeFile = this.app.workspace.getActiveFile();
-
-			if (activeFile != null){
-				newFileFolder = this.app.fileManager.getNewFileParent(activeFile.path);
-			}else{
-				newFileFolder = this.app.fileManager.getNewFileParent('');
-			}
-
-			const newFilepath = normalizePath( newFileFolder.path + "/" + newFilename );
-			console.debug('processCreateNewEncryptedNoteCommand', {newFilepath});
-			
-			this.app.vault.create(newFilepath,'').then( f=>{
-				const leaf = this.app.workspace.getLeaf( false );
-				leaf.openFile( f );
-			}).catch( reason =>{
-				new Notice(reason, 10000);
-			});
-
-			return true;
-		}catch(e){
-			console.error(e);
-			new Notice(e, 10000);
-		}
-	}
-
-	// DEPRECATED below
-
-	private deprecatedProcessEncryptDecryptWholeNoteCommand(checking: boolean, editor: Editor, view: MarkdownView): boolean {
+	processEncryptDecryptWholeNoteCommand(checking: boolean, editor: Editor, view: MarkdownView): boolean {
 
 		if ( checking && this.isSettingsModalOpen() ){
 			// Settings is open, ensures this command can show up in other
@@ -182,7 +94,7 @@ export default class MeldEncrypt extends Plugin {
 		);
 	}
 
-	private deprecatedProcessEncryptDecryptCommand(checking: boolean, editor: Editor, view: MarkdownView, decryptInPlace: boolean): boolean {
+	processEncryptDecryptCommand(checking: boolean, editor: Editor, view: MarkdownView, decryptInPlace: boolean): boolean {
 		if ( checking && this.isSettingsModalOpen() ){
 			// Settings is open, ensures this command can show up in other
 			// plugins which list commands e.g. customizable-sidebar
@@ -312,12 +224,6 @@ export default class MeldEncrypt extends Plugin {
 			return false;
 		}
 
-		// return false if trying to encrypt using this deprecated method
-		// ...so only decryption is allowed going forward
-		if (selectionAnalysis.canEncrypt){
-			return false;
-		}
-
 		if (checking) {
 			return true;
 		}
@@ -441,7 +347,7 @@ export default class MeldEncrypt extends Plugin {
 				editor.setSelection(selectionStart, selectionEnd);
 				editor.replaceSelection(decryptedText);
 			} else {
-				const decryptModal = new DecryptModal(this.app, '🔓', decryptedText, this.settings.showCopyButton);
+				const decryptModal = new DecryptModal(this.app, '🔓', decryptedText, this.settings.showButton);
 				decryptModal.onClose = () => {
 					editor.focus();
 					if (decryptModal.decryptInPlace) {
@@ -474,7 +380,7 @@ export default class MeldEncrypt extends Plugin {
 				editor.setSelection(selectionStart, selectionEnd);
 				editor.replaceSelection(decryptedText);
 			} else {
-				const decryptModal = new DecryptModal(this.app, '🔓', decryptedText, this.settings.showCopyButton);
+				const decryptModal = new DecryptModal(this.app, '🔓', decryptedText, this.settings.showButton);
 				decryptModal.onClose = () => {
 					editor.focus();
 					if (decryptModal.decryptInPlace) {
@@ -539,11 +445,9 @@ export default class MeldEncrypt extends Plugin {
 		}
 		return encryptedText;
 	}
-	
-	// DEPRECATED above
+
 }
 
-// DEPRECATED below
 class SelectionAnalysis{
 	isEmpty: boolean;
 	hasObsoleteEncryptedPrefix: boolean;
@@ -565,4 +469,3 @@ class Decryptable{
 	base64CipherText:string;
 	hint:string;
 }
-// DEPRECATED above

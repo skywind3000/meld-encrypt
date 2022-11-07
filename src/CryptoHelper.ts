@@ -28,7 +28,7 @@ export class CryptoHelperV2 {
 		return privateKey;
 	}
 
-	public async encryptToBytes(text: string, password: string): Promise<Uint8Array> {
+	public async encryptToBase64(text: string, password: string): Promise<string> {
 
 		const key = await this.deriveKey(password);
 		
@@ -48,13 +48,6 @@ export class CryptoHelperV2 {
 		finalBytes.set( vector, 0 );
 		finalBytes.set( encryptedBytes, vector.byteLength );
 
-		return finalBytes;
-	}
-
-	public async encryptToBase64(text: string, password: string): Promise<string> {
-
-		const finalBytes = await this.encryptToBytes(text, password);
-
 		//convert array to base64
 		const base64Text = btoa( String.fromCharCode(...finalBytes) );
 
@@ -69,14 +62,16 @@ export class CryptoHelperV2 {
 		return new Uint8Array(result);
 	}
 
-	public async decryptFromBytes(encryptedBytes: Uint8Array, password: string): Promise<string> {
+	public async decryptFromBase64(base64Encoded: string, password: string): Promise<string> {
 		try {
 
+			let bytesToDecode = this.stringToArray(atob(base64Encoded));
+			
 			// extract iv
-			const vector = encryptedBytes.slice(0,vectorSize);
+			const vector = bytesToDecode.slice(0,vectorSize);
 
 			// extract encrypted text
-			const encryptedTextBytes = encryptedBytes.slice(vectorSize);
+			const encryptedTextBytes = bytesToDecode.slice(vectorSize);
 
 			const key = await this.deriveKey(password);
 
@@ -90,37 +85,6 @@ export class CryptoHelperV2 {
 			// convert bytes to text
 			let decryptedText = utf8Decoder.decode(decryptedBytes);
 			return decryptedText;
-		} catch (e) {
-			//console.error(e);
-			return null;
-		}
-	}
-
-	public async decryptFromBase64(base64Encoded: string, password: string): Promise<string> {
-		try {
-
-			let bytesToDecode = this.stringToArray(atob(base64Encoded));
-			
-			return await this.decryptFromBytes(bytesToDecode, password);
-
-			// // extract iv
-			// const vector = bytesToDecode.slice(0,vectorSize);
-
-			// // extract encrypted text
-			// const encryptedTextBytes = bytesToDecode.slice(vectorSize);
-
-			// const key = await this.deriveKey(password);
-
-			// // decrypt into bytes
-			// let decryptedBytes = await crypto.subtle.decrypt(
-			// 	{name: 'AES-GCM', iv: vector},
-			// 	key,
-			// 	encryptedTextBytes
-			// );
-
-			// // convert bytes to text
-			// let decryptedText = utf8Decoder.decode(decryptedBytes);
-			// return decryptedText;
 		} catch (e) {
 			//console.error(e);
 			return null;

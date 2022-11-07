@@ -1,4 +1,12 @@
 {
+  "meld-encrypt:meld-encrypt": [
+    {
+      "modifiers": [
+        "Mod"
+      ],
+      "key": "1"
+    }
+  ],
   "meld-encrypt:encrypt-decrypt": [
     {
       "modifiers": [

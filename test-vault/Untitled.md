@@ -1,3 +1,3 @@
-222
+this is a test
 
-[[An encrypted note.encrypted]]
+of encrypting the whole note
