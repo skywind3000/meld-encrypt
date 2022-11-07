@@ -27,7 +27,7 @@ export default {
         },
         {
           src: 'dist/*',
-          dest: 'test-vault/.obsidian/plugins/meld-encrypt/'
+          dest: 'test-vault/.obsidian/plugins/meld-encrypt-classic/'
         },
       ]
     })
